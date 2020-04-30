@@ -11,6 +11,21 @@ void SystemClock_Config(void);
 
 uint32_t tick_counter_100khz = 0;
 
+uint8_t Send_buf[8];
+
+void Uart_SendCMD(uint8_t CMD ,uint8_t feedback , uint16_t dat)
+{
+	Send_buf[0] = 0x7e;
+	Send_buf[1] = 0xff; 				// зарезервированные байты
+	Send_buf [2] = 0x06; 				//длина
+	Send_buf[3] = CMD; 					// директива управления
+	Send_buf[4] = feedback; 			// нужна ли обратная связь
+	Send_buf[5] = (uint8_t)(dat >> 8);	//datah
+	Send_buf[6] = (uint8_t)(dat); 		//datal
+	Send_buf[7] = 0xef;
+	HAL_UART_Transmit(&huart2, Send_buf, 8, 500);
+}
+
 
 int main(void)
 {
@@ -28,6 +43,18 @@ int main(void)
 	MX_I2C1_Init();
 	MX_USART1_UART_Init();
 	MX_USART2_UART_Init();
+
+	// debug********************************************
+	Uart_SendCMD (0x06, 0, 0x13); // уровень громкости 21
+	Uart_SendCMD (0x03, 0, 0x01); // воспроизведение первой песни
+	Uart_SendCMD (0x06, 0, 0x10);
+	Uart_SendCMD (0x06, 0, 0x0a);
+	Uart_SendCMD (0x06, 0, 0x13);
+	Uart_SendCMD (0x03, 0, 0x02); // воспроизведение второй песни
+	Uart_SendCMD (0x03, 0, 0x03); // воспроизведение третьей песни
+	Uart_SendCMD (0x03, 0, 0x01); // воспроизведение первой песни
+	// debug********************************************
+
 	MX_TIM2_Init();
 
 	HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
