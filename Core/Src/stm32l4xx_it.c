@@ -5,6 +5,10 @@
 
 
 extern uint32_t tick_counter_100khz;
+extern uint32_t r_pulse_time_old_marker;
+extern uint32_t r_pulse_time_new_marker;
+extern int new_r_pulse_flag;
+extern uint32_t rr;
 
 
 void NMI_Handler(void)
@@ -137,4 +141,22 @@ void TIM2_IRQHandler(void)
 	(&htim2)->Instance->SR &= ~TIM_IT_UPDATE;
 
 	tick_counter_100khz++;
+}
+
+void EXTI1_IRQHandler(void)
+{
+	if(__HAL_GPIO_EXTI_GET_IT(r_pulse_Pin) != 0x00u)
+	{
+		__HAL_GPIO_EXTI_CLEAR_IT(r_pulse_Pin);
+		HAL_GPIO_EXTI_Callback(r_pulse_Pin);
+
+		r_pulse_time_new_marker = tick_counter_100khz;
+
+		if(r_pulse_time_old_marker > 0)
+		{
+			rr = (r_pulse_time_new_marker - r_pulse_time_old_marker) / 100;
+			new_r_pulse_flag = 1;
+		}
+		r_pulse_time_old_marker = r_pulse_time_new_marker;
+	}
 }

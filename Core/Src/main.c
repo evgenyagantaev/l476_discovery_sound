@@ -5,11 +5,20 @@
 #include "gpio.h"
 #include "tim.h"
 
+#include "ssd1306.h"
+#include "stdio.h"
+
 #include "math.h"
 
 void SystemClock_Config(void);
 
 uint32_t tick_counter_100khz = 0;
+uint32_t r_pulse_time_old_marker = 0;
+uint32_t r_pulse_time_new_marker = 0;
+int new_r_pulse_flag = 0;
+uint32_t rr = 0;
+uint32_t rr_array[] = {0, 0, 0};
+uint32_t r_pick_counter = 0;
 
 uint8_t Send_buf[8];
 
@@ -35,7 +44,7 @@ int main(void)
 
 	SystemClock_Config();
 	/* Disable SysTick Interrupt */
-	SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
+	//SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
 
 
 	MX_GPIO_Init();
@@ -44,16 +53,80 @@ int main(void)
 	MX_USART1_UART_Init();
 	MX_USART2_UART_Init();
 
+	HAL_Delay(30);
+	Uart_SendCMD (0x06, 0, 0x15); // уровень громкости 21
+
+
+	//****************************************************************
+	/*
+	ssd1306_set_i2c_port(&hi2c1, 1);
+	ssd1306_Init();
+	HAL_Delay(100);
+
+	ssd1306_Fill(White);
+	ssd1306_UpdateScreen();
+	HAL_Delay(100);
+	ssd1306_Fill(Black);
+	ssd1306_UpdateScreen();
+	HAL_Delay(100);
+
+	ssd1306_SetCursor(0,0);
+	ssd1306_WriteString("VALS", Font_11x18, White);
+	ssd1306_UpdateScreen();
+	HAL_Delay(100);
+	//*/
+	//****************************************************************
+
 	// debug********************************************
-	Uart_SendCMD (0x06, 0, 0x13); // уровень громкости 21
+	/*
+	HAL_Delay(30);
+	Uart_SendCMD (0x06, 0, 0x15); // уровень громкости 21
+	//HAL_Delay(10);
+	Uart_SendCMD (0x03, 0, 0x09); // воспроизведение первой песни
+	HAL_Delay(100);
+	//*/
+
+	int wait = 1;
+	while(wait)
+	{
+		if ((GPIOE->IDR & GPIO_PIN_15) != 0x00u)
+			wait = 0;
+	}
+
+	// DEBUG STOP
+	while(1)
+	{
+		if ((GPIOE->IDR & GPIO_PIN_15) == 0x00u)
+		{
+			Uart_SendCMD (0x03, 0, 0x09); // воспроизведение первой песни
+			HAL_Delay(100);
+		}
+	}
+
+
+
+	Uart_SendCMD (0x06, 0, 0x1e); // уровень громкости
 	Uart_SendCMD (0x03, 0, 0x01); // воспроизведение первой песни
-	Uart_SendCMD (0x06, 0, 0x10);
-	Uart_SendCMD (0x06, 0, 0x0a);
-	Uart_SendCMD (0x06, 0, 0x13);
+	//Uart_SendCMD (0x06, 0, 0x10);
+	//Uart_SendCMD (0x06, 0, 0x0a);
+	//Uart_SendCMD (0x06, 0, 0x13);
 	Uart_SendCMD (0x03, 0, 0x02); // воспроизведение второй песни
 	Uart_SendCMD (0x03, 0, 0x03); // воспроизведение третьей песни
-	Uart_SendCMD (0x03, 0, 0x01); // воспроизведение первой песни
+	Uart_SendCMD (0x03, 0, 0x04);
+	Uart_SendCMD (0x03, 0, 0x05);
+	Uart_SendCMD (0x03, 0, 0x06);
+	Uart_SendCMD (0x03, 0, 0x07);
+	Uart_SendCMD (0x03, 0, 0x08);
+	Uart_SendCMD (0x03, 0, 0x09);
+	Uart_SendCMD (0x03, 0, 0x0a);
+	Uart_SendCMD (0x03, 0, 0x0b);
+	Uart_SendCMD (0x03, 0, 0x0c);
+	Uart_SendCMD (0x03, 0, 0x0d);
 	// debug********************************************
+
+	/* Disable SysTick Interrupt */
+	//SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
+
 
 	MX_TIM2_Init();
 
@@ -82,34 +155,29 @@ int main(void)
 	double step = (double)base_T/(double)period;
 
 	uint32_t dac_data = A;
+	UNUSED(dac_data);
 
 	UNUSED(step);
 	UNUSED(sin_table);
 
 	while (1)
 	{
-		/*
-		HAL_GPIO_WritePin(red_led_GPIO_Port, red_led_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
-		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, (uint32_t)0x00000fff);
-		HAL_Delay(500);
-		HAL_GPIO_WritePin(red_led_GPIO_Port, red_led_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
-		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, (uint32_t)0x00000000);
-		HAL_Delay(500);
-		*/
 
 		if(tick_counter_old < tick_counter_100khz)
-		//if((tick_counter_old < tick_counter_100khz) && ((tick_counter_100khz - tick_counter_old)%3 == 0))
 		{
 			tick_counter_old = tick_counter_100khz;
 
 			/*
+			// debug sinus
+
 			uint32_t T = (uint32_t)((tick_counter_100khz%period)*step);
 			if(T>=base_T) T = base_T - 1;
 			dac_data = sin_table[T];
 			HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_data);
-			*/
+			//*/
+
+			/*
+			// debug rectangle
 
 			int semi_period = period/2;
 
@@ -122,16 +190,54 @@ int main(void)
 
 				HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_data);
 			}
+			//*/
 
 
+			// debug led blink
 			if(tick_counter_100khz%50000 == 0)
 			{
 				HAL_GPIO_TogglePin(red_led_GPIO_Port, red_led_Pin);
 				HAL_GPIO_TogglePin(green_led_GPIO_Port, green_led_Pin);
 
 			}
+		}// end if(tick_counter_old < tick_counter_100khz)
+
+		if(new_r_pulse_flag)
+		{
+			new_r_pulse_flag = 0;
+
+			rr_array[0] = rr_array[1];
+			rr_array[1] = rr_array[2];
+			rr_array[2] = rr;
+
+			if(rr_array[0]*rr_array[1]*rr_array[2] > 0)
+			{
+				uint32_t mean_rr = (rr_array[0] + rr_array[1] + rr_array[2]) / 3;
+				uint32_t heart_rate = 60000 / mean_rr;
+
+				r_pick_counter++;
+
+				char aux_message[64];
+
+				sprintf(aux_message, "R -> %u", (unsigned int)r_pick_counter);
+				ssd1306_SetCursor(0,0);
+				ssd1306_WriteString("           ", Font_11x18, White);
+				ssd1306_SetCursor(0,0);
+				ssd1306_WriteString(aux_message, Font_11x18, White);
+				//ssd1306_UpdateScreen();
+
+				sprintf(aux_message, "H -> %u", (unsigned int)heart_rate);
+				ssd1306_SetCursor(0,22);
+				ssd1306_WriteString("           ", Font_11x18, White);
+				ssd1306_SetCursor(0,22);
+				ssd1306_WriteString(aux_message, Font_11x18, White);
+				ssd1306_UpdateScreen();
+			}
+
 		}
-	}
+
+
+	}// end while
 
 }
 

@@ -66,6 +66,10 @@ void Error_Handler(void);
 #define SWDIO_GPIO_Port GPIOA
 #define SWCLK_Pin GPIO_PIN_14
 #define SWCLK_GPIO_Port GPIOA
+#define r_pulse_Pin GPIO_PIN_1
+#define r_pulse_GPIO_Port GPIOA
+#define primary_sound_Pin GPIO_PIN_14
+#define primary_sound_GPIO_Port GPIOC
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
