@@ -55,7 +55,7 @@ int main(void)
 
 	HAL_Delay(30);
 	Uart_SendCMD (0x06, 0, 0x15); // уровень громкости 21
-
+	HAL_Delay(100);
 
 	//****************************************************************
 	/*
@@ -86,42 +86,57 @@ int main(void)
 	HAL_Delay(100);
 	//*/
 
+	/*
 	int wait = 1;
 	while(wait)
 	{
 		if ((GPIOE->IDR & GPIO_PIN_15) != 0x00u)
 			wait = 0;
 	}
+	//*/
+
 
 	// DEBUG STOP
-	while(1)
+	int wait = 1;
+	while(wait)
 	{
 		if ((GPIOE->IDR & GPIO_PIN_15) == 0x00u)
 		{
 			Uart_SendCMD (0x03, 0, 0x09); // воспроизведение первой песни
 			HAL_Delay(100);
+			wait = 0;
 		}
 	}
+	HAL_Delay(12000);
+
+	while(1)
+	{
+		if ((GPIOE->IDR & GPIO_PIN_15) == 0x00u)
+		{
+			Uart_SendCMD (0x03, 0, 0x0e); // воспроизведение удара сердца
+			HAL_Delay(100);
+		}
+	}
+	//*/
 
 
-
-	Uart_SendCMD (0x06, 0, 0x1e); // уровень громкости
-	Uart_SendCMD (0x03, 0, 0x01); // воспроизведение первой песни
+	//Uart_SendCMD (0x06, 0, 0x1e); // уровень громкости
+	//Uart_SendCMD (0x03, 0, 0x01); // воспроизведение первой песни
 	//Uart_SendCMD (0x06, 0, 0x10);
 	//Uart_SendCMD (0x06, 0, 0x0a);
 	//Uart_SendCMD (0x06, 0, 0x13);
-	Uart_SendCMD (0x03, 0, 0x02); // воспроизведение второй песни
-	Uart_SendCMD (0x03, 0, 0x03); // воспроизведение третьей песни
-	Uart_SendCMD (0x03, 0, 0x04);
-	Uart_SendCMD (0x03, 0, 0x05);
-	Uart_SendCMD (0x03, 0, 0x06);
-	Uart_SendCMD (0x03, 0, 0x07);
-	Uart_SendCMD (0x03, 0, 0x08);
-	Uart_SendCMD (0x03, 0, 0x09);
-	Uart_SendCMD (0x03, 0, 0x0a);
-	Uart_SendCMD (0x03, 0, 0x0b);
-	Uart_SendCMD (0x03, 0, 0x0c);
-	Uart_SendCMD (0x03, 0, 0x0d);
+	//Uart_SendCMD (0x03, 0, 0x02); // воспроизведение второй песни
+	//Uart_SendCMD (0x03, 0, 0x03); // воспроизведение третьей песни
+	//Uart_SendCMD (0x03, 0, 0x04);
+	//Uart_SendCMD (0x03, 0, 0x05);
+	//Uart_SendCMD (0x03, 0, 0x06);
+	//Uart_SendCMD (0x03, 0, 0x07);
+	//Uart_SendCMD (0x03, 0, 0x08);
+	//Uart_SendCMD (0x03, 0, 0x09);
+	//Uart_SendCMD (0x03, 0, 0x0a);
+	//Uart_SendCMD (0x03, 0, 0x0b);
+	//Uart_SendCMD (0x03, 0, 0x0c);
+	//Uart_SendCMD (0x03, 0, 0x0d);
 	// debug********************************************
 
 	/* Disable SysTick Interrupt */
@@ -205,6 +220,8 @@ int main(void)
 		if(new_r_pulse_flag)
 		{
 			new_r_pulse_flag = 0;
+
+			Uart_SendCMD (0x03, 0, 0x0e);
 
 			rr_array[0] = rr_array[1];
 			rr_array[1] = rr_array[2];
