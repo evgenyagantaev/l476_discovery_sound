@@ -32,12 +32,14 @@ void Uart_SendCMD(uint8_t CMD ,uint8_t feedback , uint16_t dat)
 	Send_buf[5] = (uint8_t)(dat >> 8);	//datah
 	Send_buf[6] = (uint8_t)(dat); 		//datal
 	Send_buf[7] = 0xef;
-	HAL_UART_Transmit(&huart2, Send_buf, 8, 500);
+	HAL_UART_Transmit(&huart1, Send_buf, 8, 500);
 }
 
 
 int main(void)
 {
+
+	int i;
 
 	HAL_Init();
 
@@ -53,7 +55,7 @@ int main(void)
 	MX_USART1_UART_Init();
 	MX_USART2_UART_Init();
 
-	HAL_Delay(30);
+	HAL_Delay(100);
 	Uart_SendCMD (0x06, 0, 0x15); // уровень громкости 21
 	HAL_Delay(100);
 
@@ -77,45 +79,83 @@ int main(void)
 	//*/
 	//****************************************************************
 
-	// debug********************************************
+	// vklyuchaem vibro i svetodiody
 	/*
-	HAL_Delay(30);
-	Uart_SendCMD (0x06, 0, 0x15); // уровень громкости 21
-	//HAL_Delay(10);
+	for(i=0; i<120; i++)
+	{
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_SET);
+		HAL_Delay(50);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_RESET);
+		HAL_Delay(50);
+	}
+	//*/
+
+	int sound_command_counter = 0;
+	int vibro_on = 0;
+	int vibro_set = 0;
+	int vibro_counter = 0;
+	uint32_t start_marker = 0;
+
+	// debug
+	HAL_Delay(3000);
 	Uart_SendCMD (0x03, 0, 0x09); // воспроизведение первой песни
-	HAL_Delay(100);
-	//*/
-
-	/*
-	int wait = 1;
-	while(wait)
-	{
-		if ((GPIOE->IDR & GPIO_PIN_15) != 0x00u)
-			wait = 0;
-	}
-	//*/
-
-
-	// DEBUG STOP
-	int wait = 1;
-	while(wait)
-	{
-		if ((GPIOE->IDR & GPIO_PIN_15) == 0x00u)
-		{
-			Uart_SendCMD (0x03, 0, 0x09); // воспроизведение первой песни
-			HAL_Delay(100);
-			wait = 0;
-		}
-	}
-	HAL_Delay(12000);
+	vibro_on = 1;
+	vibro_counter = 0;
 
 	while(1)
 	{
-		if ((GPIOE->IDR & GPIO_PIN_15) == 0x00u)
+		if((GPIOA->IDR & GPIO_PIN_1) == 0x00u)
 		{
-			Uart_SendCMD (0x03, 0, 0x0e); // воспроизведение удара сердца
-			HAL_Delay(100);
+			sound_command_counter++;
+			HAL_Delay(7);
+
+			if((GPIOA->IDR & GPIO_PIN_1) == 0x00u)
+			{
+				sound_command_counter++;
+			}
+
+			if(sound_command_counter == 1)
+			{
+				Uart_SendCMD (0x03, 0, 0x09); // воспроизведение первой песни
+				 vibro_on = 1;
+				 vibro_counter = 0;
+			}
+			else if(sound_command_counter == 2)
+			{
+				Uart_SendCMD (0x03, 0, 0x0e); // воспроизведение удара сердца
+			}
+
+			sound_command_counter = 0;
+
 		}
+
+		if( vibro_on)
+		{
+			if((vibro_set == 0) && (start_marker == 0))
+			{
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_SET);
+				vibro_set = 1;
+				start_marker = HAL_GetTick();
+			}
+			else if((vibro_set == 1) && (start_marker > 0) && ((HAL_GetTick() - start_marker) > 50))
+			{
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_RESET);
+				vibro_set = 0;
+				start_marker = HAL_GetTick();
+			}
+			else if((vibro_set == 0) && (start_marker > 0) && ((HAL_GetTick() - start_marker) > 50))
+			{
+				start_marker = 0;
+				vibro_counter++;
+			}
+
+			if(vibro_counter > 120) // 12 sec
+			{
+				vibro_counter = 0;
+				vibro_on = 0;
+			}
+		}
+
 	}
 	//*/
 
@@ -158,7 +198,6 @@ int main(void)
 
 
 	uint32_t sin_table[1000];
-	int i;
 	for(i=0; i<base_T; i++)
 	{
 		double t = ((double)i)*time_masshtab;
